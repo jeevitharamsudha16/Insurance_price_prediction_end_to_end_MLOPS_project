@@ -1,6 +1,14 @@
 import sys
-sys.stdout = open("main.log", "w")  # or "a" to append
+import os
+import mlflow
 
+# Save stdout to log file (optional)
+sys.stdout = open("main.log", "w")
+
+# Set remote MLflow tracking URI from env
+mlflow.set_tracking_uri(os.getenv("MLFLOW_TRACKING_URI"))
+
+# Import project modules
 from data_loader import load_data
 from data_preprocessing import preprocess_data
 from model_training import train_and_save_models
