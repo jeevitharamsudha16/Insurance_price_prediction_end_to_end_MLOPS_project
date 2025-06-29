@@ -9,10 +9,18 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from mlflow.tracking import MlflowClient
 from mlflow.models import infer_signature
 from mlflow.exceptions import MlflowException
+
 import warnings
 warnings.filterwarnings("ignore")
 
+# ✅ Set remote MLflow tracking URI
+mlflow.set_tracking_uri("https://insurance-price-prediction-end-to-end-41zi.onrender.com")
+
 def evaluate_and_register_models(X_test, y_test, model_dir="models"):
+    """
+    Evaluates multiple models, logs metrics & plots to MLflow,
+    registers models, and promotes the best one to 'champion'.
+    """
     mlflow.set_experiment("insurance_model_evaluation")
     client = MlflowClient()
 
@@ -33,8 +41,10 @@ def evaluate_and_register_models(X_test, y_test, model_dir="models"):
         model = joblib.load(model_path)
 
         with mlflow.start_run(run_name=f"{model_name}_evaluation"):
+            print(f"🔍 Evaluating: {model_name}")
             y_pred = model.predict(X_test)
 
+            # ✅ Calculate metrics
             mae = mean_absolute_error(y_test, y_pred)
             mse = mean_squared_error(y_test, y_pred)
             rmse = np.sqrt(mse)
@@ -47,7 +57,7 @@ def evaluate_and_register_models(X_test, y_test, model_dir="models"):
                 "R2": r2
             })
 
-            # Save prediction plot
+            # ✅ Save and log prediction plot
             fig, ax = plt.subplots(figsize=(8, 5))
             ax.scatter(y_test, y_pred, alpha=0.6)
             ax.plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], 'r--')
@@ -61,7 +71,7 @@ def evaluate_and_register_models(X_test, y_test, model_dir="models"):
             mlflow.log_artifact(plot_path)
             os.remove(plot_path)
 
-            # Register model correctly using `name=...` instead of deprecated `artifact_path`
+            # ✅ Log and register model
             signature = infer_signature(X_test, y_pred)
             input_example = X_test.iloc[:1]
 
@@ -69,7 +79,7 @@ def evaluate_and_register_models(X_test, y_test, model_dir="models"):
                 mlflow.set_tag("model_name", model_name)
                 mlflow.sklearn.log_model(
                     sk_model=model,
-                    artifact_path="model",  # new recommended argument
+                    artifact_path="model",
                     registered_model_name=f"insurance_model_{model_name}",
                     signature=signature,
                     input_example=input_example
@@ -78,7 +88,7 @@ def evaluate_and_register_models(X_test, y_test, model_dir="models"):
                 print(f"⚠️ Failed to register model {model_name}: {e}")
                 continue
 
-            # Retrieve latest model version and track best
+            # ✅ Track best model
             try:
                 latest_versions = client.get_latest_versions(f"insurance_model_{model_name}", stages=["None"])
                 if latest_versions:
@@ -92,6 +102,7 @@ def evaluate_and_register_models(X_test, y_test, model_dir="models"):
             except MlflowException as e:
                 print(f"⚠️ Could not retrieve model version for {model_name}: {e}")
 
+            # Store evaluation metrics
             metrics_list.append({
                 "model": model_name,
                 "R2": r2,
@@ -99,7 +110,7 @@ def evaluate_and_register_models(X_test, y_test, model_dir="models"):
                 "RMSE": rmse
             })
 
-    # Save model comparison
+    # ✅ Save model comparison leaderboard
     if metrics_list:
         df_metrics = pd.DataFrame(metrics_list)
         df_metrics.sort_values(by="R2", ascending=False, inplace=True)
@@ -108,7 +119,7 @@ def evaluate_and_register_models(X_test, y_test, model_dir="models"):
         mlflow.log_artifact(metrics_csv_path)
         print(f"📄 Saved model comparison to {metrics_csv_path}")
 
-    # Promote best model
+    # ✅ Promote best model to 'champion'
     if best_registered_name and best_model_version:
         try:
             client.set_registered_model_alias(
