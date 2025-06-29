@@ -69,7 +69,7 @@ def evaluate_and_register_models(X_test, y_test, model_dir="models"):
                 mlflow.set_tag("model_name", model_name)
                 mlflow.sklearn.log_model(
                     sk_model=model,
-                    name=f"insurance_model_{model_name}",  # new recommended argument
+                    artifact_path="model",  # new recommended argument
                     registered_model_name=f"insurance_model_{model_name}",
                     signature=signature,
                     input_example=input_example
