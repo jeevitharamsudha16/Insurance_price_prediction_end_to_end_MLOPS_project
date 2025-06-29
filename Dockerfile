@@ -10,11 +10,6 @@ RUN apt-get update && apt-get install -y build-essential && \
 
 RUN mkdir -p /app/mlruns
 
-# 👇 Use ENTRYPOINT instead of CMD to force override
+# Correct JSON-style CMD array (not YAML-style!)
 ENTRYPOINT ["mlflow", "server"]
-CMD [
-  "--backend-store-uri", "sqlite:///mlflow.db",
-  "--default-artifact-root", "./mlruns",
-  "--host", "0.0.0.0",
-  "--port", "5000"
-]
+CMD ["--backend-store-uri", "sqlite:///mlflow.db", "--default-artifact-root", "./mlruns", "--host", "0.0.0.0", "--port", "5000"]
