@@ -13,13 +13,13 @@ from mlflow.exceptions import MlflowException
 import warnings
 warnings.filterwarnings("ignore")
 
-# ✅ Set remote MLflow tracking URI
-mlflow.set_tracking_uri("https://insurance-price-prediction-end-to-end-41zi.onrender.com")
+# ✅ Set MLflow tracking URI dynamically
+mlflow.set_tracking_uri(os.getenv("MLFLOW_TRACKING_URI"))
 
 def evaluate_and_register_models(X_test, y_test, model_dir="models"):
     """
-    Evaluates multiple models, logs metrics & plots to MLflow,
-    registers models, and promotes the best one to 'champion'.
+    Evaluates saved models, logs metrics and prediction plots to MLflow,
+    registers them to the model registry, and promotes the best model.
     """
     mlflow.set_experiment("insurance_model_evaluation")
     client = MlflowClient()
@@ -44,7 +44,7 @@ def evaluate_and_register_models(X_test, y_test, model_dir="models"):
             print(f"🔍 Evaluating: {model_name}")
             y_pred = model.predict(X_test)
 
-            # ✅ Calculate metrics
+            # ✅ Log metrics
             mae = mean_absolute_error(y_test, y_pred)
             mse = mean_squared_error(y_test, y_pred)
             rmse = np.sqrt(mse)
@@ -57,21 +57,21 @@ def evaluate_and_register_models(X_test, y_test, model_dir="models"):
                 "R2": r2
             })
 
-            # ✅ Save and log prediction plot
+            # ✅ Log prediction plot
             fig, ax = plt.subplots(figsize=(8, 5))
             ax.scatter(y_test, y_pred, alpha=0.6)
             ax.plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], 'r--')
             ax.set_xlabel("Actual Charges")
             ax.set_ylabel("Predicted Charges")
             ax.set_title(f"Actual vs Predicted ({model_name})")
-            plot_path = f"{model_dir}/{model_name}_pred_plot.png"
+            plot_path = os.path.join(model_dir, f"{model_name}_pred_plot.png")
             fig.savefig(plot_path, dpi=300)
             plt.close(fig)
 
             mlflow.log_artifact(plot_path)
             os.remove(plot_path)
 
-            # ✅ Log and register model
+            # ✅ Register model
             signature = infer_signature(X_test, y_pred)
             input_example = X_test.iloc[:1]
 
@@ -102,7 +102,6 @@ def evaluate_and_register_models(X_test, y_test, model_dir="models"):
             except MlflowException as e:
                 print(f"⚠️ Could not retrieve model version for {model_name}: {e}")
 
-            # Store evaluation metrics
             metrics_list.append({
                 "model": model_name,
                 "R2": r2,
@@ -110,7 +109,7 @@ def evaluate_and_register_models(X_test, y_test, model_dir="models"):
                 "RMSE": rmse
             })
 
-    # ✅ Save model comparison leaderboard
+    # ✅ Save leaderboard CSV
     if metrics_list:
         df_metrics = pd.DataFrame(metrics_list)
         df_metrics.sort_values(by="R2", ascending=False, inplace=True)
@@ -119,7 +118,7 @@ def evaluate_and_register_models(X_test, y_test, model_dir="models"):
         mlflow.log_artifact(metrics_csv_path)
         print(f"📄 Saved model comparison to {metrics_csv_path}")
 
-    # ✅ Promote best model to 'champion'
+    # ✅ Promote best model
     if best_registered_name and best_model_version:
         try:
             client.set_registered_model_alias(
