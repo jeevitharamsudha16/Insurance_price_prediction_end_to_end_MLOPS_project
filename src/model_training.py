@@ -2,6 +2,8 @@ import os
 import joblib
 import mlflow
 import mlflow.sklearn
+import warnings
+
 from sklearn.linear_model import LinearRegression
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
 from sklearn.tree import DecisionTreeRegressor
@@ -9,29 +11,28 @@ from sklearn.svm import SVR
 from sklearn.neighbors import KNeighborsRegressor
 from xgboost import XGBRegressor
 from sklearn.model_selection import GridSearchCV
-import warnings
 
 warnings.filterwarnings("ignore", message=".*Inferred schema contains integer column.*")
 
-# ✅ Set remote MLflow tracking server URI
-mlflow.set_tracking_uri("https://insurance-price-prediction-end-to-end-41zi.onrender.com")
+# ✅ Set MLflow tracking URI from environment variable
+mlflow.set_tracking_uri(os.getenv("MLFLOW_TRACKING_URI"))
 
 # ✅ Set experiment name
 mlflow.set_experiment("insurance_model_training")
 
-# ✅ Enable auto-logging
+# ✅ Enable sklearn auto-logging
 mlflow.sklearn.autolog()
 
 
 def train_and_save_models(X_train, y_train, model_dir="models"):
     """
-    Trains multiple regression models, performs hyperparameter tuning,
-    logs everything to MLflow, and saves the best model as .pkl file.
+    Trains multiple regression models, performs hyperparameter tuning (where applicable),
+    logs everything to MLflow, and saves the trained models locally as .pkl files.
 
     Args:
-    - X_train: Features for training
-    - y_train: Target values
-    - model_dir: Directory to save the trained models
+    - X_train (DataFrame): Training features
+    - y_train (Series): Training target values
+    - model_dir (str): Directory to save .pkl model files
     """
     os.makedirs(model_dir, exist_ok=True)
 
@@ -67,11 +68,11 @@ def train_and_save_models(X_train, y_train, model_dir="models"):
                 model.fit(X_train, y_train)
                 best_model = model
 
-            # Save the trained model as a .pkl file
+            # Save the model locally
             model_path = os.path.join(model_dir, f"{name}.pkl")
             joblib.dump(best_model, model_path)
 
-            # Log the saved model as an artifact to MLflow
+            # Log the model artifact to MLflow
             mlflow.log_artifact(model_path)
 
             print(f"✅ Trained and saved: {name} → {model_path}")
