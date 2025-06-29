@@ -1,0 +1,29 @@
+# === Python ===
+__pycache__/
+*.py[cod]
+*.ipynb_checkpoints/
+*.egg-info/
+*.pyo
+
+# === Virtual environments ===
+env/
+venv/
+
+# === MLflow logs & model artifacts ===
+mlruns/
+scalers/
+models/*.pkl
+models/*_plot.png
+
+# === Streamlit ===
+.streamlit/
+*.log
+
+# === OS & Editor junk ===
+.DS_Store
+.vscode/
+.idea/
+
+# === CI/CD logs or cache (if any in future) ===
+*.log
+*.cache/
